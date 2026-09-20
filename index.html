@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Neon Dodge</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <main class="app">
+
+        <!-- HEADER -->
+        <header class="header">
+
+            <div class="brand">
+                <span class="brand-small">ARCADE / 01</span>
+                <h1>NEON DODGE</h1>
+                <p>Survive. Dodge. Beat your high score.</p>
+            </div>
+
+            <div class="status">
+                <span class="status-dot"></span>
+                SYSTEM ONLINE
+            </div>
+
+        </header>
+
+
+        <!-- STATS -->
+        <section class="stats">
+
+            <div class="stat-box">
+                <span>SCORE</span>
+                <strong id="score">0</strong>
+            </div>
+
+            <div class="stat-box">
+                <span>TIME</span>
+                <strong id="time">0.0s</strong>
+            </div>
+
+            <div class="stat-box">
+                <span>LEVEL</span>
+                <strong id="level">1</strong>
+            </div>
+
+            <div class="stat-box">
+                <span>BEST</span>
+                <strong id="best">0</strong>
+            </div>
+
+        </section>
+
+
+        <!-- GAME -->
+        <section class="game-wrapper">
+
+            <canvas id="gameCanvas"></canvas>
+
+
+            <!-- START SCREEN -->
+            <div class="overlay" id="startScreen">
+
+                <div class="overlay-content">
+
+                    <span class="game-label">SURVIVAL MODE</span>
+
+                    <h2>READY?</h2>
+
+                    <p>
+                        Move your player and avoid the falling obstacles.
+                        Collect energy to increase your score.
+                    </p>
+
+                    <button id="startBtn">
+                        START GAME
+                    </button>
+
+                    <!-- <div class="controls">
+                        <span>WASD</span>
+                        <span>OR</span>
+                        <span>ARROW KEYS</span>
+                    </div> -->
+
+                </div>
+
+            </div>
+
+
+            <!-- GAME OVER -->
+            <div class="overlay hidden" id="gameOverScreen">
+
+                <div class="overlay-content">
+
+                    <span class="game-label">RUN ENDED</span>
+
+                    <h2>GAME OVER</h2>
+
+                    <p id="resultMessage">
+                        You survived!
+                    </p>
+
+                    <div class="final-score">
+                        <span>FINAL SCORE</span>
+                        <strong id="finalScore">0</strong>
+                    </div>
+
+                    <button id="restartBtn">
+                        PLAY AGAIN
+                    </button>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- LEGEND -->
+        <section class="legend-section">
+
+            <div class="legend">
+                <span class="legend-dot player"></span>
+                PLAYER
+            </div>
+
+            <div class="legend">
+                <span class="legend-dot obstacle"></span>
+                OBSTACLE
+            </div>
+
+            <div class="legend">
+                <span class="legend-dot power"></span>
+                ENERGY
+            </div>
+
+        </section>
+
+
+        <!-- FOOTER -->
+        <footer>
+
+            <span>NEON DODGE</span>
+
+            <span>
+                VANILLA HTML • CSS • JAVASCRIPT
+            </span>
+
+        </footer>
+
+    </main>
+
+
+    <script src="script.js"></script>
+
+</body>
+</html>
