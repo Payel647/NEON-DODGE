@@ -169,6 +169,9 @@ canvas {
     height: 100%;
 
     display: block;
+    touch-action: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 

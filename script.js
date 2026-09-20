@@ -44,6 +44,12 @@ let powerUps = [];
 
 const keys = {};
 
+const pointerInput = {
+    active: false,
+    x: 0,
+    y: 0
+};
+
 // AUDIO
 
 let audioContext = null;
@@ -222,6 +228,64 @@ window.addEventListener(
     }
 );
 
+function updatePointerPosition(event) {
+
+    const rect =
+        canvas.getBoundingClientRect();
+
+    const xRatio =
+        canvas.width / rect.width;
+
+    const yRatio =
+        canvas.height / rect.height;
+
+    pointerInput.x =
+        (event.clientX - rect.left) * xRatio;
+
+    pointerInput.y =
+        (event.clientY - rect.top) * yRatio;
+}
+
+canvas.addEventListener(
+    "pointerdown",
+    (event) => {
+
+        pointerInput.active = true;
+
+        updatePointerPosition(event);
+
+        canvas.setPointerCapture?.(event.pointerId);
+    }
+);
+
+canvas.addEventListener(
+    "pointermove",
+    (event) => {
+
+        if (!pointerInput.active) {
+            return;
+        }
+
+        updatePointerPosition(event);
+    }
+);
+
+window.addEventListener(
+    "pointerup",
+    () => {
+
+        pointerInput.active = false;
+    }
+);
+
+window.addEventListener(
+    "pointercancel",
+    () => {
+
+        pointerInput.active = false;
+    }
+);
+
 // START GAME
 
 function startGame() {
@@ -244,6 +308,7 @@ function startGame() {
 
     soundTimer = 0.5;
 
+    pointerInput.active = false;
 
     obstacles = [];
 
@@ -383,59 +448,88 @@ function update(deltaTime) {
 
 function movePlayer() {
 
-    let dx = 0;
-    let dy = 0;
+    if (pointerInput.active) {
 
+        const dx =
+            pointerInput.x - player.x;
 
-    if (
-        keys["arrowleft"] ||
-        keys["a"]
-    ) {
-        dx -= 1;
-    }
+        const dy =
+            pointerInput.y - player.y;
 
-
-    if (
-        keys["arrowright"] ||
-        keys["d"]
-    ) {
-        dx += 1;
-    }
-
-
-    if (
-        keys["arrowup"] ||
-        keys["w"]
-    ) {
-        dy -= 1;
-    }
-
-
-    if (
-        keys["arrowdown"] ||
-        keys["s"]
-    ) {
-        dy += 1;
-    }
-
-
-    // Normalize diagonal movement
-
-    if (dx !== 0 || dy !== 0) {
-
-        const length =
+        const distance =
             Math.sqrt(dx * dx + dy * dy);
 
-        dx /= length;
-        dy /= length;
+        if (distance > 0) {
+
+            const moveDistance =
+                Math.min(
+                    distance,
+                    player.speed * 0.016
+                );
+
+            player.x +=
+                (dx / distance) * moveDistance;
+
+            player.y +=
+                (dy / distance) * moveDistance;
+        }
     }
+    else {
+
+        let dx = 0;
+        let dy = 0;
 
 
-    player.x +=
-        dx * player.speed * 0.016;
+        if (
+            keys["arrowleft"] ||
+            keys["a"]
+        ) {
+            dx -= 1;
+        }
 
-    player.y +=
-        dy * player.speed * 0.016;
+
+        if (
+            keys["arrowright"] ||
+            keys["d"]
+        ) {
+            dx += 1;
+        }
+
+
+        if (
+            keys["arrowup"] ||
+            keys["w"]
+        ) {
+            dy -= 1;
+        }
+
+
+        if (
+            keys["arrowdown"] ||
+            keys["s"]
+        ) {
+            dy += 1;
+        }
+
+
+        // Normalize diagonal movement
+
+        if (dx !== 0 || dy !== 0) {
+
+            const length =
+                Math.sqrt(dx * dx + dy * dy);
+
+            dx /= length;
+            dy /= length;
+        }
+
+
+        player.x +=
+            dx * player.speed * 0.016;
+
+        player.y +=
+            dy * player.speed * 0.016;
+    }
 
 
     // Keep player inside canvas
