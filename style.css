@@ -10,9 +10,9 @@ body {
     background:
         radial-gradient(
             circle at top,
-            #151922 0%,
-            #080a0f 45%,
-            #050608 100%
+            #0651ff 0%,
+            #000000 45%,
+            #6f00ff 100%
         );
 
     color: #f5f5f5;

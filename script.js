@@ -1,5 +1,5 @@
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
+const canvas = document.getElementById("gameCanvas"); // Get the canvas element from the HTML document
+const ctx = canvas.getContext("2d"); // Get the 2D rendering context for the canvas, which allows us to draw shapes, text, images, and other graphics on the canvas.
 
 // DOM ELEMENTS
 
@@ -33,1118 +33,623 @@ let gameRunning = false;
 let obstacleTimer = 0;
 let powerTimer = 0;
 
-
 // Objects
 
 let obstacles = [];
 let powerUps = [];
 
-
 // Keyboard
-
 const keys = {};
-
 const pointerInput = {
-    active: false,
-    x: 0,
-    y: 0
+  active: false,
+  x: 0,
+  y: 0,
 };
-
 // AUDIO
-
 let audioContext = null;
-
 let soundTimer = 0;
-
-
 // Create audio context
-
 function initAudio() {
-
-    if (!audioContext) {
-
-        const AudioContext =
-            window.AudioContext ||
-            window.webkitAudioContext;
-
-        audioContext = new AudioContext();
-    }
-
-    if (audioContext.state === "suspended") {
-        audioContext.resume();
-    }
+  if (!audioContext) {
+    const AudioContext = window.AudioContext || window.webkitAudioContext; // Check for browser compatibility
+    audioContext = new AudioContext();
+  }
+  if (audioContext.state === "suspended") {
+    audioContext.resume();
+  }
 }
-
 
 // Gameplay beep
 
 function playBeep() {
+  if (!audioContext) return;
 
-    if (!audioContext) return;
+  const oscillator = audioContext.createOscillator();
 
-    const oscillator =
-        audioContext.createOscillator();
+  const gain = audioContext.createGain();
 
-    const gain =
-        audioContext.createGain();
+  oscillator.type = "square";
 
+  oscillator.frequency.setValueAtTime(650, audioContext.currentTime);
 
-    oscillator.type = "square";
+  gain.gain.setValueAtTime(0.04, audioContext.currentTime);
 
-    oscillator.frequency.setValueAtTime(
-        650,
-        audioContext.currentTime
-    );
+  gain.gain.exponentialRampToValueAtTime(
+    0.001,
+    audioContext.currentTime + 0.08,
+  );
 
+  oscillator.connect(gain);
 
-    gain.gain.setValueAtTime(
-        0.04,
-        audioContext.currentTime
-    );
+  gain.connect(audioContext.destination);
 
-    gain.gain.exponentialRampToValueAtTime(
-        0.001,
-        audioContext.currentTime + 0.08
-    );
+  oscillator.start();
 
-
-    oscillator.connect(gain);
-
-    gain.connect(audioContext.destination);
-
-
-    oscillator.start();
-
-    oscillator.stop(
-        audioContext.currentTime + 0.08
-    );
+  oscillator.stop(audioContext.currentTime + 0.08);
 }
-
 
 // Collision boom
 
 function playBoom() {
+  if (!audioContext) return;
 
-    if (!audioContext) return;
+  const oscillator = audioContext.createOscillator();
 
-    const oscillator =
-        audioContext.createOscillator();
+  const gain = audioContext.createGain();
 
-    const gain =
-        audioContext.createGain();
+  oscillator.type = "sawtooth";
 
+  oscillator.frequency.setValueAtTime(120, audioContext.currentTime);
 
-    oscillator.type = "sawtooth";
+  oscillator.frequency.exponentialRampToValueAtTime(
+    35,
+    audioContext.currentTime + 0.45,
+  );
 
+  gain.gain.setValueAtTime(0.25, audioContext.currentTime);
 
-    oscillator.frequency.setValueAtTime(
-        120,
-        audioContext.currentTime
-    );
+  gain.gain.exponentialRampToValueAtTime(
+    0.001,
+    audioContext.currentTime + 0.45,
+  );
 
-    oscillator.frequency.exponentialRampToValueAtTime(
-        35,
-        audioContext.currentTime + 0.45
-    );
+  oscillator.connect(gain);
 
+  gain.connect(audioContext.destination);
 
-    gain.gain.setValueAtTime(
-        0.25,
-        audioContext.currentTime
-    );
+  oscillator.start();
 
-    gain.gain.exponentialRampToValueAtTime(
-        0.001,
-        audioContext.currentTime + 0.45
-    );
-
-
-    oscillator.connect(gain);
-
-    gain.connect(audioContext.destination);
-
-
-    oscillator.start();
-
-    oscillator.stop(
-        audioContext.currentTime + 0.45
-    );
+  oscillator.stop(audioContext.currentTime + 0.45);
 }
 
 // PLAYER
 const player = {
+  x: 0,
 
-    x: 0,
+  y: 0,
 
-    y: 0,
+  radius: 13,
 
-    radius: 13,
-
-    speed: 280
+  speed: 280,
 };
 
 // RESIZE CANVAS
 function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
 
-    const rect =
-        canvas.getBoundingClientRect();
+  width = rect.width;
+  height = rect.height;
 
-    width = rect.width;
-    height = rect.height;
+  canvas.width = width;
+  canvas.height = height;
 
-
-    canvas.width = width;
-    canvas.height = height;
-
-
-    player.x = width / 2;
-    player.y = height - 70;
+  player.x = width / 2;
+  player.y = height - 70;
 }
 
-
-window.addEventListener(
-    "resize",
-    resizeCanvas
-);
+window.addEventListener("resize", resizeCanvas);
 
 // KEYBOARD
 
-window.addEventListener(
-    "keydown",
-    (event) => {
+window.addEventListener("keydown", (event) => {
+  keys[event.key.toLowerCase()] = true;
+});
 
-        keys[event.key.toLowerCase()] = true;
-
-    }
-);
-
-
-window.addEventListener(
-    "keyup",
-    (event) => {
-
-        keys[event.key.toLowerCase()] = false;
-
-    }
-);
+window.addEventListener("keyup", (event) => {
+  keys[event.key.toLowerCase()] = false;
+});
 
 function updatePointerPosition(event) {
+  const rect = canvas.getBoundingClientRect();
 
-    const rect =
-        canvas.getBoundingClientRect();
+  const xRatio = canvas.width / rect.width;
 
-    const xRatio =
-        canvas.width / rect.width;
+  const yRatio = canvas.height / rect.height;
 
-    const yRatio =
-        canvas.height / rect.height;
+  pointerInput.x = (event.clientX - rect.left) * xRatio;
 
-    pointerInput.x =
-        (event.clientX - rect.left) * xRatio;
-
-    pointerInput.y =
-        (event.clientY - rect.top) * yRatio;
+  pointerInput.y = (event.clientY - rect.top) * yRatio;
 }
 
-canvas.addEventListener(
-    "pointerdown",
-    (event) => {
+canvas.addEventListener("pointerdown", (event) => {
+  pointerInput.active = true;
 
-        pointerInput.active = true;
+  updatePointerPosition(event);
 
-        updatePointerPosition(event);
+  canvas.setPointerCapture?.(event.pointerId);
+});
 
-        canvas.setPointerCapture?.(event.pointerId);
-    }
-);
+canvas.addEventListener("pointermove", (event) => {
+  if (!pointerInput.active) {
+    return;
+  }
 
-canvas.addEventListener(
-    "pointermove",
-    (event) => {
+  updatePointerPosition(event);
+});
 
-        if (!pointerInput.active) {
-            return;
-        }
+window.addEventListener("pointerup", () => {
+  pointerInput.active = false;
+});
 
-        updatePointerPosition(event);
-    }
-);
-
-window.addEventListener(
-    "pointerup",
-    () => {
-
-        pointerInput.active = false;
-    }
-);
-
-window.addEventListener(
-    "pointercancel",
-    () => {
-
-        pointerInput.active = false;
-    }
-);
+window.addEventListener("pointercancel", () => {
+  pointerInput.active = false;
+});
 
 // START GAME
 
 function startGame() {
+  // Start audio because this
+  // function is triggered by button click
 
-    // Start audio because this
-    // function is triggered by button click
+  initAudio();
 
-    initAudio();
+  score = 0;
 
+  gameTime = 0;
 
-    score = 0;
+  level = 1;
 
-    gameTime = 0;
+  obstacleTimer = 0;
 
-    level = 1;
+  powerTimer = 0;
 
-    obstacleTimer = 0;
+  soundTimer = 0.5;
 
-    powerTimer = 0;
+  pointerInput.active = false;
 
-    soundTimer = 0.5;
+  obstacles = [];
 
-    pointerInput.active = false;
+  powerUps = [];
 
-    obstacles = [];
+  player.x = width / 2;
 
-    powerUps = [];
+  player.y = height - 70;
 
+  gameRunning = true;
 
-    player.x = width / 2;
+  startScreen.classList.add("hidden");
 
-    player.y = height - 70;
+  gameOverScreen.classList.add("hidden");
 
+  updateUI();
+  let lastTime = performance.now();
 
-    gameRunning = true;
-
-
-    startScreen.classList.add("hidden");
-
-    gameOverScreen.classList.add("hidden");
-
-
-    updateUI();
-
-
-    let lastTime =
-        performance.now();
-
-
-    function gameLoop(currentTime) {
-
-        if (!gameRunning) {
-            return;
-        }
-
-
-        const deltaTime =
-            Math.min(
-                (currentTime - lastTime) / 1000,
-                0.05
-            );
-
-
-        lastTime = currentTime;
-
-
-        update(deltaTime);
-
-        draw();
-
-
-        animationId =
-            requestAnimationFrame(gameLoop);
+  function gameLoop(currentTime) {
+    if (!gameRunning) {
+      return;
     }
 
+    const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.05);
 
-    animationId =
-        requestAnimationFrame(gameLoop);
+    lastTime = currentTime;
+
+    update(deltaTime);
+
+    draw();
+
+    animationId = requestAnimationFrame(gameLoop);
+  }
+  animationId = requestAnimationFrame(gameLoop);
 }
 
-
 // UPDATE GAME
-
 function update(deltaTime) {
+  gameTime += deltaTime;
+  // Level increases every 10 seconds
+  level = Math.floor(gameTime / 10) + 1;
+  // Score continuously increases
+  score += deltaTime * (10 + level * 2);
+  // GAMEPLAY SOUND
+  soundTimer -= deltaTime;
+  if (soundTimer <= 0) {
+    playBeep();
+    soundTimer = 0.65;
+  }
+  movePlayer();
+  // CREATE OBSTACLES
+  obstacleTimer -= deltaTime;
+  const obstacleInterval = Math.max(0.25, 0.8 - level * 0.05);
+  if (obstacleTimer <= 0) {
+    createObstacle();
+    obstacleTimer = obstacleInterval;
+  }
 
-    gameTime += deltaTime;
+  // CREATE ENERGY
+  powerTimer -= deltaTime;
+  if (powerTimer <= 0) {
+    createPowerUp();
+    powerTimer = 2.5 + Math.random() * 2;
+  }
+  updateObstacles(deltaTime);
 
+  updatePowerUps(deltaTime);
 
-    // Level increases every 10 seconds
+  checkCollisions();
 
-    level =
-        Math.floor(gameTime / 10) + 1;
-
-
-    // Score continuously increases
-
-    score +=
-        deltaTime * (10 + level * 2);
-
-    // GAMEPLAY SOUND
-
-    soundTimer -= deltaTime;
-
-
-    if (soundTimer <= 0) {
-
-        playBeep();
-
-        soundTimer = 0.65;
-    }
-
-
-    movePlayer();
-    // CREATE OBSTACLES
-
-    obstacleTimer -= deltaTime;
-
-
-    const obstacleInterval =
-        Math.max(
-            0.25,
-            0.8 - level * 0.05
-        );
-
-
-    if (obstacleTimer <= 0) {
-
-        createObstacle();
-
-        obstacleTimer =
-            obstacleInterval;
-    }
-
-    // CREATE ENERGY
-
-    powerTimer -= deltaTime;
-
-
-    if (powerTimer <= 0) {
-
-        createPowerUp();
-
-        powerTimer =
-            2.5 + Math.random() * 2;
-    }
-
-
-    updateObstacles(deltaTime);
-
-    updatePowerUps(deltaTime);
-
-
-    checkCollisions();
-
-
-    updateUI();
+  updateUI();
 }
 
 // MOVE PLAYER
-
 function movePlayer() {
-
-    if (pointerInput.active) {
-
-        const dx =
-            pointerInput.x - player.x;
-
-        const dy =
-            pointerInput.y - player.y;
-
-        const distance =
-            Math.sqrt(dx * dx + dy * dy);
-
-        if (distance > 0) {
-
-            const moveDistance =
-                Math.min(
-                    distance,
-                    player.speed * 0.016
-                );
-
-            player.x +=
-                (dx / distance) * moveDistance;
-
-            player.y +=
-                (dy / distance) * moveDistance;
-        }
+  if (pointerInput.active) {
+    const dx = pointerInput.x - player.x;
+    const dy = pointerInput.y - player.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance > 0) {
+      const moveDistance = Math.min(distance, player.speed * 0.016);
+      player.x += (dx / distance) * moveDistance;
+      player.y += (dy / distance) * moveDistance;
     }
-    else {
-
-        let dx = 0;
-        let dy = 0;
-
-
-        if (
-            keys["arrowleft"] ||
-            keys["a"]
-        ) {
-            dx -= 1;
-        }
-
-
-        if (
-            keys["arrowright"] ||
-            keys["d"]
-        ) {
-            dx += 1;
-        }
-
-
-        if (
-            keys["arrowup"] ||
-            keys["w"]
-        ) {
-            dy -= 1;
-        }
-
-
-        if (
-            keys["arrowdown"] ||
-            keys["s"]
-        ) {
-            dy += 1;
-        }
-
-
-        // Normalize diagonal movement
-
-        if (dx !== 0 || dy !== 0) {
-
-            const length =
-                Math.sqrt(dx * dx + dy * dy);
-
-            dx /= length;
-            dy /= length;
-        }
-
-
-        player.x +=
-            dx * player.speed * 0.016;
-
-        player.y +=
-            dy * player.speed * 0.016;
+  } else {
+    let dx = 0;
+    let dy = 0;
+    if (keys["arrowleft"] || keys["a"]) {
+      dx -= 1;
     }
-
-
-    // Keep player inside canvas
-
-    player.x =
-        Math.max(
-            player.radius,
-            Math.min(
-                width - player.radius,
-                player.x
-            )
-        );
-
-
-    player.y =
-        Math.max(
-            player.radius,
-            Math.min(
-                height - player.radius,
-                player.y
-            )
-        );
+    if (keys["arrowright"] || keys["d"]) {
+      dx += 1;
+    }
+    if (keys["arrowup"] || keys["w"]) {
+      dy -= 1;
+    }
+    if (keys["arrowdown"] || keys["s"]) {
+      dy += 1;
+    }
+    // Normalize diagonal movement
+    if (dx !== 0 || dy !== 0) {
+      const length = Math.sqrt(dx * dx + dy * dy);
+      dx /= length;
+      dy /= length;
+    }
+    player.x += dx * player.speed * 0.016;
+    player.y += dy * player.speed * 0.016;
+  }
+  // Keep player inside canvas
+  player.x = Math.max(player.radius, Math.min(width - player.radius, player.x));
+  player.y = Math.max(
+    player.radius,
+    Math.min(height - player.radius, player.y),
+  );
 }
 
 // CREATE OBSTACLE
 
 function createObstacle() {
+  const radius = 10 + Math.random() * 12;
 
-    const radius =
-        10 + Math.random() * 12;
+  obstacles.push({
+    x: radius + Math.random() * (width - radius * 2),
 
+    y: -radius,
 
-    obstacles.push({
+    radius: radius,
 
-        x:
-            radius +
-            Math.random() *
-            (width - radius * 2),
-
-        y:
-            -radius,
-
-        radius: radius,
-
-        speed:
-            120 +
-            Math.random() * 80 +
-            level * 12
-    });
+    speed: 120 + Math.random() * 80 + level * 12,
+  });
 }
 
 // CREATE ENERGY
 
 function createPowerUp() {
+  const radius = 11;
 
-    const radius = 11;
+  powerUps.push({
+    x: radius + Math.random() * (width - radius * 2),
 
+    y: -radius,
 
-    powerUps.push({
+    radius: radius,
 
-        x:
-            radius +
-            Math.random() *
-            (width - radius * 2),
-
-        y:
-            -radius,
-
-        radius: radius,
-
-        speed:
-            100 +
-            Math.random() * 40
-    });
+    speed: 100 + Math.random() * 40,
+  });
 }
 
 // UPDATE OBSTACLES
 
 function updateObstacles(deltaTime) {
+  obstacles.forEach((obstacle) => {
+    obstacle.y += obstacle.speed * deltaTime;
+  });
 
-    obstacles.forEach(
-        obstacle => {
-
-            obstacle.y +=
-                obstacle.speed *
-                deltaTime;
-
-        }
-    );
-
-
-    obstacles =
-        obstacles.filter(
-            obstacle =>
-                obstacle.y <
-                height + obstacle.radius
-        );
+  obstacles = obstacles.filter(
+    (obstacle) => obstacle.y < height + obstacle.radius,
+  );
 }
 
 // UPDATE ENERGY
 
 function updatePowerUps(deltaTime) {
+  powerUps.forEach((power) => {
+    power.y += power.speed * deltaTime;
+  });
 
-    powerUps.forEach(
-        power => {
-
-            power.y +=
-                power.speed *
-                deltaTime;
-
-        }
-    );
-
-
-    powerUps =
-        powerUps.filter(
-            power =>
-                power.y <
-                height + power.radius
-        );
+  powerUps = powerUps.filter((power) => power.y < height + power.radius);
 }
 
 // COLLISION CHECK
 
-function isColliding(
-    object1,
-    object2
-) {
+function isColliding(object1, object2) {
+  const dx = object1.x - object2.x;
 
-    const dx =
-        object1.x - object2.x;
+  const dy = object1.y - object2.y;
 
-    const dy =
-        object1.y - object2.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
 
-
-    const distance =
-        Math.sqrt(
-            dx * dx + dy * dy
-        );
-
-
-    return (
-        distance <
-        object1.radius +
-        object2.radius
-    );
+  return distance < object1.radius + object2.radius;
 }
 
 // CHECK COLLISIONS
 
 function checkCollisions() {
+  // OBSTACLES
 
-    // OBSTACLES
+  for (const obstacle of obstacles) {
+    if (isColliding(player, obstacle)) {
+      endGame();
 
-    for (const obstacle of obstacles) {
-
-        if (
-            isColliding(
-                player,
-                obstacle
-            )
-        ) {
-
-            endGame();
-
-            return;
-        }
+      return;
     }
+  }
 
+  // ENERGY
 
-    // ENERGY
+  for (let i = powerUps.length - 1; i >= 0; i--) {
+    if (isColliding(player, powerUps[i])) {
+      score += 100;
 
-    for (
-        let i = powerUps.length - 1;
-        i >= 0;
-        i--
-    ) {
-
-        if (
-            isColliding(
-                player,
-                powerUps[i]
-            )
-        ) {
-
-            score += 100;
-
-            powerUps.splice(i, 1);
-        }
+      powerUps.splice(i, 1);
     }
+  }
 }
 
 // END GAME
 
 function endGame() {
+  gameRunning = false;
 
-    gameRunning = false;
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+  }
 
+  // Collision sound
 
-    if (animationId) {
+  playBoom();
 
-        cancelAnimationFrame(
-            animationId
-        );
-    }
+  const finalScore = Math.floor(score);
 
+  finalScoreElement.textContent = finalScore;
 
-    // Collision sound
+  // BEST SCORE
 
-    playBoom();
+  const currentBest = Number(localStorage.getItem("neonDodgeBest")) || 0;
 
+  if (finalScore > currentBest) {
+    localStorage.setItem("neonDodgeBest", finalScore);
 
-    const finalScore =
-        Math.floor(score);
+    resultMessage.textContent = "New high score!";
+  } else {
+    resultMessage.textContent = "You survived " + formatTime(gameTime) + ".";
+  }
 
+  updateBestScore();
 
-    finalScoreElement.textContent =
-        finalScore;
-
-
-    // BEST SCORE
-
-    const currentBest =
-        Number(
-            localStorage.getItem(
-                "neonDodgeBest"
-            )
-        ) || 0;
-
-
-    if (finalScore > currentBest) {
-
-        localStorage.setItem(
-            "neonDodgeBest",
-            finalScore
-        );
-
-        resultMessage.textContent =
-            "New high score!";
-    }
-    else {
-
-        resultMessage.textContent =
-            "You survived " +
-            formatTime(gameTime) +
-            ".";
-    }
-
-
-    updateBestScore();
-
-
-    gameOverScreen.classList.remove(
-        "hidden"
-    );
+  gameOverScreen.classList.remove("hidden");
 }
 
 // UPDATE UI
 
 function updateUI() {
+  scoreElement.textContent = Math.floor(score);
 
-    scoreElement.textContent =
-        Math.floor(score);
+  timeElement.textContent = formatTime(gameTime);
 
-
-    timeElement.textContent =
-        formatTime(gameTime);
-
-
-    levelElement.textContent =
-        level;
+  levelElement.textContent = level;
 }
 
 // FORMAT TIME
 
 function formatTime(seconds) {
-
-    return seconds.toFixed(1) + "s";
+  return seconds.toFixed(1) + "s";
 }
 
 // BEST SCORE
 
 function updateBestScore() {
+  const best = Number(localStorage.getItem("neonDodgeBest")) || 0;
 
-    const best =
-        Number(
-            localStorage.getItem(
-                "neonDodgeBest"
-            )
-        ) || 0;
-
-
-    bestElement.textContent =
-        best;
+  bestElement.textContent = best;
 }
 
 // DRAW GAME
 
 function draw() {
+  ctx.clearRect(0, 0, width, height);
 
-    ctx.clearRect(
-        0,
-        0,
-        width,
-        height
-    );
+  drawBackground();
 
+  drawGrid();
 
-    drawBackground();
+  drawPowerUps();
 
-    drawGrid();
+  drawObstacles();
 
-    drawPowerUps();
-
-    drawObstacles();
-
-    drawPlayer();
+  drawPlayer();
 }
 
 // BACKGROUND
 
 function drawBackground() {
+  ctx.fillStyle = "#080a0f";
 
-    ctx.fillStyle =
-        "#080a0f";
-
-
-    ctx.fillRect(
-        0,
-        0,
-        width,
-        height
-    );
+  ctx.fillRect(0, 0, width, height);
 }
 
 // GRID
 
 function drawGrid() {
+  ctx.strokeStyle = "rgba(255,255,255,0.035)";
+  ctx.lineWidth = 1;
+  const gridSize = 40;
 
-    ctx.strokeStyle =
-        "rgba(255,255,255,0.035)";
+  for (let x = 0; x <= width; x += gridSize) {
+    ctx.beginPath();
 
+    ctx.moveTo(x, 0);
 
-    ctx.lineWidth = 1;
+    ctx.lineTo(x, height);
 
+    ctx.stroke();
+  }
 
-    const gridSize = 40;
+  for (let y = 0; y <= height; y += gridSize) {
+    ctx.beginPath();
 
+    ctx.moveTo(0, y);
 
-    for (
-        let x = 0;
-        x <= width;
-        x += gridSize
-    ) {
+    ctx.lineTo(width, y);
 
-        ctx.beginPath();
-
-        ctx.moveTo(x, 0);
-
-        ctx.lineTo(x, height);
-
-        ctx.stroke();
-    }
-
-
-    for (
-        let y = 0;
-        y <= height;
-        y += gridSize
-    ) {
-
-        ctx.beginPath();
-
-        ctx.moveTo(0, y);
-
-        ctx.lineTo(width, y);
-
-        ctx.stroke();
-    }
+    ctx.stroke();
+  }
 }
 
 // DRAW PLAYER
 
 function drawPlayer() {
+  // Glow
 
-    // Glow
+  ctx.beginPath();
 
-    ctx.beginPath();
+  ctx.arc(player.x, player.y, player.radius + 8, 0, Math.PI * 2);
 
-    ctx.arc(
-        player.x,
-        player.y,
-        player.radius + 8,
-        0,
-        Math.PI * 2
-    );
+  ctx.fillStyle = "rgba(34,197,94,0.12)";
 
+  ctx.fill();
 
-    ctx.fillStyle =
-        "rgba(34,197,94,0.12)";
+  // Green outer circle
 
+  ctx.beginPath();
 
-    ctx.fill();
+  ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
 
+  ctx.fillStyle = "#22c55e";
 
-    // Green outer circle
+  ctx.fill();
 
-    ctx.beginPath();
+  // White center
 
-    ctx.arc(
-        player.x,
-        player.y,
-        player.radius,
-        0,
-        Math.PI * 2
-    );
+  ctx.beginPath();
 
+  ctx.arc(player.x, player.y, 5, 0, Math.PI * 2);
 
-    ctx.fillStyle =
-        "#22c55e";
+  ctx.fillStyle = "#ffffff";
 
-
-    ctx.fill();
-
-
-    // White center
-
-    ctx.beginPath();
-
-    ctx.arc(
-        player.x,
-        player.y,
-        5,
-        0,
-        Math.PI * 2
-    );
-
-
-    ctx.fillStyle =
-        "#ffffff";
-
-
-    ctx.fill();
+  ctx.fill();
 }
 
 // DRAW OBSTACLES
 
 function drawObstacles() {
+  obstacles.forEach((obstacle) => {
+    // Glow
 
-    obstacles.forEach(
-        obstacle => {
+    ctx.beginPath();
 
-            // Glow
+    ctx.arc(obstacle.x, obstacle.y, obstacle.radius + 6, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(239,68,68,0.12)";
+    ctx.fill();
+    // RED obstacle
 
-            ctx.beginPath();
-
-            ctx.arc(
-                obstacle.x,
-                obstacle.y,
-                obstacle.radius + 6,
-                0,
-                Math.PI * 2
-            );
-
-
-            ctx.fillStyle =
-                "rgba(239,68,68,0.12)";
-
-
-            ctx.fill();
-
-
-            // RED obstacle
-
-            ctx.beginPath();
-
-            ctx.arc(
-                obstacle.x,
-                obstacle.y,
-                obstacle.radius,
-                0,
-                Math.PI * 2
-            );
-
-
-            ctx.fillStyle =
-                "#ef4444";
-
-
-            ctx.fill();
-
-
-            // Highlight
-
-            ctx.beginPath();
-
-            ctx.arc(
-                obstacle.x - 3,
-                obstacle.y - 3,
-                obstacle.radius * 0.25,
-                0,
-                Math.PI * 2
-            );
-
-
-            ctx.fillStyle =
-                "#ff8a8a";
-
-
-            ctx.fill();
-        }
+    ctx.beginPath();
+    ctx.arc(obstacle.x, obstacle.y, obstacle.radius, 0, Math.PI * 2);
+    ctx.fillStyle = "#ef4444";
+    ctx.fill();
+    // Highlight
+    ctx.beginPath();
+    ctx.arc(
+      obstacle.x - 3,
+      obstacle.y - 3,
+      obstacle.radius * 0.25,
+      0,
+      Math.PI * 2,
     );
+    ctx.fillStyle = "#ff8a8a";
+    ctx.fill();
+  });
 }
 
 // DRAW ENERGY
 
 function drawPowerUps() {
+  powerUps.forEach((power) => {
+    // Outer glow
 
-    powerUps.forEach(
-        power => {
+    ctx.beginPath();
 
-            // Outer glow
+    ctx.arc(power.x, power.y, power.radius + 7, 0, Math.PI * 2);
 
-            ctx.beginPath();
+    ctx.fillStyle = "rgba(249,115,22,0.12)";
 
-            ctx.arc(
-                power.x,
-                power.y,
-                power.radius + 7,
-                0,
-                Math.PI * 2
-            );
+    ctx.fill();
 
+    // ORANGE energy
 
-            ctx.fillStyle =
-                "rgba(249,115,22,0.12)";
+    ctx.beginPath();
 
+    ctx.arc(power.x, power.y, power.radius, 0, Math.PI * 2);
 
-            ctx.fill();
+    ctx.fillStyle = "#f97316";
 
+    ctx.fill();
 
-            // ORANGE energy
+    // Plus sign
 
-            ctx.beginPath();
+    ctx.strokeStyle = "#ffffff";
 
-            ctx.arc(
-                power.x,
-                power.y,
-                power.radius,
-                0,
-                Math.PI * 2
-            );
+    ctx.lineWidth = 2;
 
+    ctx.beginPath();
 
-            ctx.fillStyle =
-                "#f97316";
+    ctx.moveTo(power.x - 5, power.y);
 
+    ctx.lineTo(power.x + 5, power.y);
 
-            ctx.fill();
+    ctx.stroke();
 
+    ctx.beginPath();
 
-            // Plus sign
+    ctx.moveTo(power.x, power.y - 5);
 
-            ctx.strokeStyle =
-                "#ffffff";
+    ctx.lineTo(power.x, power.y + 5);
 
-
-            ctx.lineWidth = 2;
-
-
-            ctx.beginPath();
-
-            ctx.moveTo(
-                power.x - 5,
-                power.y
-            );
-
-            ctx.lineTo(
-                power.x + 5,
-                power.y
-            );
-
-            ctx.stroke();
-
-
-            ctx.beginPath();
-
-            ctx.moveTo(
-                power.x,
-                power.y - 5
-            );
-
-            ctx.lineTo(
-                power.x,
-                power.y + 5
-            );
-
-            ctx.stroke();
-        }
-    );
+    ctx.stroke();
+  });
 }
 
 // BUTTON EVENTS
 
-startBtn.addEventListener(
-    "click",
-    startGame
-);
+startBtn.addEventListener("click", startGame);
 
-
-restartBtn.addEventListener(
-    "click",
-    startGame
-);
+restartBtn.addEventListener("click", startGame);
 
 // INITIAL SETUP
 
